@@ -183,7 +183,7 @@ def construct_weserv_url(url: str,
             + (f'&fit={fit}' if fit else '')
             + (f'&output={output_format}' if output_format else '')
             + (f'&q={quality}' if quality else '')
-            + (f'&we=1' if without_enlargement else '')
+            + ('&we=1' if without_enlargement else '')
             + (f'&default={weserv_param_encode(default_image)}' if default_image else '')
     )
 

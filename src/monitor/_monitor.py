@@ -215,6 +215,7 @@ class Monitor(Singleton):
     async def run_periodic_task(self):
         self._stat.print_summary()
         Notifier.on_periodic_task()
+        locks.cleanup_idle_locks()
         feed_ids_set = db.effective_utils.EffectiveTasks.get_tasks()
         if not feed_ids_set:
             return
@@ -340,23 +341,24 @@ class Monitor(Singleton):
             feed.entry_hashes = list(islice(new_hashes, max(len(rss_d.entries) * 2, 100))) or None
             feed_updated_fields.update({'last_modified', 'entry_hashes'})
         finally:
-            if feed.error_count != new_error_count:
-                feed.error_count = new_error_count
-                feed_updated_fields.add('error_count')
+            if feed.state != 0:
+                if feed.error_count != new_error_count:
+                    feed.error_count = new_error_count
+                    feed_updated_fields.add('error_count')
 
-            if feed.next_check_time != new_next_check_time:
-                feed.next_check_time = new_next_check_time
-                feed_updated_fields.add('next_check_time')
+                if feed.next_check_time != new_next_check_time:
+                    feed.next_check_time = new_next_check_time
+                    feed_updated_fields.add('next_check_time')
 
-            if new_error_count == 0 and wf.url != feed.link:
-                new_url_feed = await inner.sub.migrate_to_new_url(feed, wf.url)
-                if isinstance(new_url_feed, db.Feed):
-                    feed = new_url_feed
-                    # Update has been done during the migration, skip it.
-                    feed_updated_fields.clear()
+                if new_error_count == 0 and wf.url != feed.link:
+                    new_url_feed = await inner.sub.migrate_to_new_url(feed, wf.url)
+                    if isinstance(new_url_feed, db.Feed):
+                        feed = new_url_feed
+                        # Update has been done during the migration, skip it.
+                        feed_updated_fields.clear()
 
-            if feed_updated_fields:
-                await feed.save(update_fields=feed_updated_fields)
+                if feed_updated_fields:
+                    await feed.save(update_fields=feed_updated_fields)
 
         updated_entries.reverse()  # send the earliest entry first
         await Notifier(feed=feed, subs=subs, entries=updated_entries).notify_all()

@@ -70,9 +70,18 @@ async def cmd_set_option(event: TypeEventMsgHint, *_, lang: Optional[str] = None
 
     if key == 'default_interval':
         all_feeds = await db.Feed.filter(state=1)
-        for feed in all_feeds:
-            env.loop.create_task(inner.utils.update_interval(feed))
-        logger.info("Flushed the interval of all feeds")
+
+        async def update_all_feeds():
+            sem = asyncio.Semaphore(20)
+
+            async def bounded_update(f):
+                async with sem:
+                    await inner.utils.update_interval(f)
+
+            await asyncio.gather(*(bounded_update(f) for f in all_feeds), return_exceptions=True)
+            logger.info("Flushed the interval of all feeds")
+
+        env.loop.create_task(update_all_feeds())
 
     await event.respond(
         f'<b>{i18n[lang]["option_updated"]}</b>\n'
@@ -187,7 +196,7 @@ async def cmd_user_info_or_callback_set_user(
         entity = await env.bot.get_entity(user_entity_like)
         if isinstance(entity, types.User):
             username = entity.username
-            name = entity.first_name + (f' {entity.last_name}' if entity.last_name else '')
+            name = (entity.first_name or '') + (f' {entity.last_name}' if entity.last_name else '')
             user_type = i18n[lang]['user']
             participant_count = None
         elif isinstance(entity, types.Channel):

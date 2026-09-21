@@ -15,6 +15,7 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+import sys
 from typing import Optional, Final
 
 import aerich
@@ -57,9 +58,13 @@ assert all(path.is_dir() for path in __MIGRATIONS_DIRS.values())
 
 async def __upgrade_migrations_in_db():
     aerich_version = aerich.version.__version__
-    if int(aerich_version[0]) == 0 and int(aerich_version[2]) < 7:
+    try:
+        aerich_tuple = tuple(int(x) for x in aerich_version.split('.')[:2])
+    except (ValueError, TypeError):
+        aerich_tuple = (0, 0)
+    if aerich_tuple < (0, 7):
         logger.critical(f'UNSUPPORTED AERICH VERSION: {aerich_version}, PLEASE UPGRADE TO >=0.7.0')
-        exit(1)
+        sys.exit(1)
 
     async with in_transaction():
         try:
@@ -78,7 +83,7 @@ async def __upgrade_migrations_in_db():
             new_migration_file = old_migration_file.with_suffix('.py')
             if not new_migration_file.is_file():
                 logger.critical(f'MIGRATION FILE NOT FOUND: {new_migration_file}')
-                exit(1)
+                sys.exit(1)
             new_version = new_migration_file.name
             logger.info(f'Upgrading migration: {revisions.app}/{revisions.version} -> {revisions.app}/{new_version}')
             revisions.version = new_version
@@ -91,7 +96,7 @@ async def init():
         DB_TYPE = DBType(env.DATABASE_URL.partition(':')[0])
     except ValueError:
         logger.critical(f'INVALID DB SCHEME (EXPECTED: {", ".join(t.value for t in DBType)}): {env.DATABASE_URL}')
-        exit(1)
+        sys.exit(1)
     aerich_command = aerich.Command(
         tortoise_config=config.TORTOISE_ORM,
         location=str(__MIGRATIONS_DIRS[DB_TYPE]),
@@ -99,6 +104,19 @@ async def init():
 
     # await Tortoise.init(config=config.TORTOISE_ORM)
     await aerich_command.init()
+    if DB_TYPE == DBType.SQLITE:
+        try:
+            conn = Tortoise.get_connection('default')
+            await conn.execute_script(
+                'PRAGMA journal_mode = WAL;\n'
+                'PRAGMA synchronous = NORMAL;\n'
+                'PRAGMA busy_timeout = 15000;\n'
+                'PRAGMA cache_size = -64000;\n'
+                'PRAGMA foreign_keys = ON;\n'
+            )
+            logger.debug('Applied SQLite performance PRAGMAs (WAL, synchronous=NORMAL, busy_timeout=15000)')
+        except Exception as e:
+            logger.warning('Failed to apply SQLite performance PRAGMAs:', exc_info=e)
     await __upgrade_migrations_in_db()
     try:
         if applied_migrations := await aerich_command.upgrade(run_in_transaction=True):
@@ -110,7 +128,7 @@ async def init():
                 logger.critical(f'UNAPPPLIED MIGRATIONS: {", ".join(migrations_to_apply)}')
         except Exception as e:
             logger.error('Failed to fetch unapplied migrations', exc_info=e)
-        exit(1)
+        sys.exit(1)
     await effective_utils.init()
     logger.info('Successfully connected to the DB')
 

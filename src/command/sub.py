@@ -144,7 +144,10 @@ async def cmd_or_callback_unsub_all(
         )
 
         unsub_all_result = await inner.sub.unsub_all(chat_id, lang=lang)
-        await send_success_and_failure_msg(event, **unsub_all_result, lang=lang, edit=True)
+        if unsub_all_result:
+            await send_success_and_failure_msg(event, **unsub_all_result, lang=lang, edit=True)
+        else:
+            await event.respond(i18n[lang]['no_subscription'])
         return
 
     if await inner.utils.have_subs(chat_id):

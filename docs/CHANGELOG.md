@@ -5,6 +5,7 @@
 ### Highlights
 
 - **Support Python 3.13**: Officially supports Python 3.13. The official Docker image is now based on Python 3.13 as well.
+- **YouTube Video Downloader Admin Menu (`/ytdl`)**: Added an interactive media downloader menu for bot managers using `yt-dlp`. Bot managers can run `/ytdl <url>` or reply to any message with `/ytdl` to select between Best MP4, 720p MP4, or MP3 audio. Leverages Telethon's native MTProto layer to upload files up to 2.0 GB directly to Telegram.
 
 ### Enhancements
 

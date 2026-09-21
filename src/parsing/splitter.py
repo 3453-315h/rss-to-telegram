@@ -135,10 +135,10 @@ def text_and_format_entities_split(
                     entity.offset -= surrogate_len_sum
             chunks.append((pending_text, pending_entities))
             break
-        for curr_length_limit in range(curr_length_limit, 0, -100):
+        for limit in range(curr_length_limit, 0, -100):
             with suppress(OverflowError):
                 for sep in SEPARATORS:
-                    sep_pos = pending_text.rfind(sep, int(curr_length_limit * 0.5), curr_length_limit)
+                    sep_pos = pending_text.rfind(sep, int(limit * 0.5), limit)
                     if sep_pos != -1:
                         curr_text = pending_text[:sep_pos + len(sep)]
                         surrogate_end_pos = surrogate_len_sum + surrogate_len(curr_text)

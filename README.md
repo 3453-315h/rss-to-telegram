@@ -60,6 +60,7 @@
     - Hashtags, custom title, etc.
 - Individual proxy settings for Telegram and RSS feeds
 - OPML importing and exporting (keep custom title)
+- Built-in YouTube video/audio downloader menu for bot managers (`/ytdl`, up to 2 GB via Telethon MTProto)
 - Optimized performance (see also the [FAQ](docs/FAQ.md#q-how-is-the-performance-of-the-bot))
 - User-friendly
 - HTTP Caching

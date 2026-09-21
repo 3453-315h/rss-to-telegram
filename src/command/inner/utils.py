@@ -160,7 +160,7 @@ async def get_sub_list_by_page(user_id: int, page_number: int, size: int, desc: 
         # raise IndexError('Page number must be positive.')
         page_number = 1
 
-    sub_count = await db.Sub.filter(user=user_id, *args, **kwargs).count()
+    sub_count = await db.Sub.filter(*args, user=user_id, **kwargs).count()
     if sub_count == 0:
         return 0, 0, [], 0
 
@@ -168,7 +168,7 @@ async def get_sub_list_by_page(user_id: int, page_number: int, size: int, desc: 
     page_number = min(page_number, page_count)
 
     offset = (page_number - 1) * size
-    page = await db.Sub.filter(user=user_id, *args, **kwargs) \
+    page = await db.Sub.filter(*args, user=user_id, **kwargs) \
         .order_by('-id' if desc else 'id') \
         .limit(size) \
         .offset(offset) \
@@ -229,7 +229,7 @@ async def get_sub_choosing_buttons(user_id: int,
 
     size = columns * rows
     page_number, page_count, page, sub_count = \
-        await get_sub_list_by_page(user_id=user_id, page_number=page_number, size=size, *args, **kwargs)
+        await get_sub_list_by_page(*args, user_id=user_id, page_number=page_number, size=size, **kwargs)
 
     if page_count == 0:
         return None
@@ -306,11 +306,11 @@ async def update_interval(feed: Union[db.Feed, db.Sub, int]):
 
 
 async def list_sub(user_id: int, *args, **kwargs) -> list[db.Sub]:
-    return await db.Sub.filter(user=user_id, *args, **kwargs).prefetch_related('feed')
+    return await db.Sub.filter(*args, user=user_id, **kwargs).prefetch_related('feed')
 
 
 async def count_sub(user_id: int, *args, **kwargs) -> int:
-    return await db.Sub.filter(user=user_id, *args, **kwargs).count()
+    return await db.Sub.filter(*args, user=user_id, **kwargs).count()
 
 
 async def have_subs(user_id: int) -> bool:

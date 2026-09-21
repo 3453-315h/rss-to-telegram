@@ -61,6 +61,23 @@
 | `EXECUTOR_NICENESS_INCREMENT` | The niceness increment of subprocesses (if `MULTIPROCESSING=1`) and threads | `5`                                           | `2`                                             |
 | `DEBUG`                       | Enable debug logging or not?                                                | `1`                                           | `0`                                             |
 
+### YouTube Downloader settings (Manager only)
+
+| Key                  | Description                                                                     | Example                  | Default             |
+|----------------------|---------------------------------------------------------------------------------|--------------------------|---------------------|
+| `YTDL_MAX_FILE_SIZE` | Maximum file size (in bytes) allowed for YouTube media downloads                | `2147483648`             | `2147483648` (2 GB) |
+| `YTDL_CONCURRENCY`   | Maximum concurrent active YouTube downloads                                     | `2`                      | `2`                 |
+| `YTDL_COOKIES_PATH`  | Path to Netscape-format cookies file for YouTube authentication / bot bypass   | `/app/config/cookies.txt`|                     |
+
+## Manager commands
+
+The bot manager can execute exclusive administrative commands:
+
+- `/test`: Test bot performance and network latency.
+- `/set_option`: Configure runtime options stored in the database.
+- `/user_info`: View or modify user permissions and subscription limits.
+- `/ytdl <url>`: Open an interactive inline download menu for a YouTube video. You can also reply with `/ytdl` to any message containing a YouTube link. Supports downloading Best Quality MP4, 720p MP4, or MP3 audio (with up to 2.0 GB upload capacity via Telethon MTProto).
+
 ## Manager options
 
 > Manager options are options stored in the database. The bot manager can change it by using the `/set_option` command.

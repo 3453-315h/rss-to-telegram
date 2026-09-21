@@ -78,7 +78,7 @@ class Post:
         )
 
     async def send_formatted_post_according_to_sub(self, sub: db.Sub):
-        if not isinstance(sub.feed, db.User):
+        if not isinstance(sub.user, db.User):
             await sub.fetch_related('user')
         user: db.User = sub.user
         await self.send_formatted_post(

@@ -95,10 +95,10 @@ class Telegraph(aiograph.Telegraph):
 
     async def replace_session(self):
         await self.session.close()
-        proxy_connector = ProxyConnector(**env.TELEGRAPH_PROXY_DICT, loop=self.loop) \
+        proxy_connector = ProxyConnector(**env.TELEGRAPH_PROXY_DICT) \
             if env.TELEGRAPH_PROXY_DICT else None
         self.session = RetryClient(connector=proxy_connector, timeout=ClientTimeout(total=10),
-                                   loop=self.loop, json_serialize=self._json_serialize)
+                                   json_serialize=self._json_serialize)
 
     async def create_page(self, *args, **kwargs) -> aiograph.types.Page:
         async with self._fc_lock:  # if not blocked, continue; otherwise, wait

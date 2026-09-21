@@ -70,8 +70,8 @@ class User(Model, Base):
     class Meta:
         table = 'user'
 
-    def __str__(self):
-        return self.id
+    def __str__(self) -> str:
+        return str(self.id)
 
 
 class Feed(Model, Base):

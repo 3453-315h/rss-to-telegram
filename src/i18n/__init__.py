@@ -29,7 +29,7 @@ FALLBACK_LANGUAGE = istr('en')
 NO_FALLBACK_KEYS = {istr('iso_639_code')}
 
 REPO_TYPE = 'GitHub'
-REPO_URL = 'https://github.com/Rongronggg9/RSS-to-Telegram-Bot'
+REPO_URL = 'https://github.com/3453-315h/rss-to-telegram'
 
 NEED_PRE_FILL = {
     # istr('default_emoji_header_description'):
@@ -40,7 +40,7 @@ NEED_PRE_FILL = {
 
 COMMANDS = ('sub', 'unsub', 'unsub_all', 'list', 'set', 'set_default', 'import', 'export', 'activate_subs',
             'deactivate_subs', 'version', 'help', 'lang')
-MANAGER_COMMANDS = ('test', 'set_option', 'user_info')
+MANAGER_COMMANDS = ('test', 'set_option', 'user_info', 'ytdl')
 REQUIRED_KEYS = {istr('lang_code'), istr('lang_native_name'), istr('select_lang_prompt')}
 
 
@@ -155,6 +155,9 @@ class _L10N:
 
     def key_exist(self, key: str):
         return key in self.__l10n_lang and (self.__l10n_lang[key] or key in NO_FALLBACK_KEYS)
+
+    def __contains__(self, key: str) -> bool:
+        return self.key_exist(key)
 
     def __getitem__(self, key: str) -> str:
         if self.key_exist(key):

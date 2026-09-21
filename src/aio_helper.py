@@ -22,6 +22,8 @@ from typing import Callable, Optional
 from typing_extensions import Literal
 
 import os
+import sys
+import asyncio
 from functools import partial
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, Future
 from time import sleep
@@ -33,8 +35,8 @@ from . import env, log
 
 MP_CTX = get_context()
 
-CPU_COUNT = os.cpu_count()
-AVAIL_CPU_COUNT = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else CPU_COUNT
+CPU_COUNT = os.cpu_count() or 1
+AVAIL_CPU_COUNT = (len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else CPU_COUNT) or CPU_COUNT
 PROCESS_COUNT = min(AVAIL_CPU_COUNT, 3) if env.MULTIPROCESSING else 1
 
 # Though multithreading in CPython cannot improve performance due to GIL, having more threads is still useful for
@@ -56,7 +58,7 @@ logger = log.getLogger('RSStT.aio_helper')
 
 
 def _process_exit(_signum, _frame):
-    exit(1)
+    sys.exit(1)
 
 
 def _common_initializer():
@@ -142,15 +144,21 @@ async def run_async(func: Callable, *args, prefer_pool: POOL_TYPE = None, **kwar
     if rotate_deque_flag and __aioExecutorsDeque and executor is __aioExecutorsDeque[0]:
         __aioExecutorsDeque.rotate(1)
 
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = env.loop
+
     return (
-        await env.loop.run_in_executor(executor, partial(func, *args, **kwargs))
+        await loop.run_in_executor(executor, partial(func, *args, **kwargs))
         if kwargs else
-        await env.loop.run_in_executor(executor, func, *args)
+        await loop.run_in_executor(executor, func, *args)
     )
 
 
 def shutdown():
     if aioProcessExecutor:
         aioProcessExecutor.shutdown(wait=True)
-    if aioProcessExecutor:
+    if aioThreadExecutor:
         aioThreadExecutor.shutdown(wait=False)
+

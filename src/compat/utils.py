@@ -39,7 +39,7 @@ except ImportError:
 INT64_T_MAX: Final = 2 ** 63 - 1
 
 # backport `contextlib.nullcontext` for Python 3.9
-if sys.version_info[1] >= 10:
+if sys.version_info >= (3, 10):
     # noinspection PyUnresolvedReferences
     from contextlib import nullcontext
 else:
@@ -76,10 +76,10 @@ class AiohttpUvloopTransportHotfix(AbstractAsyncContextManager):
 # Some distributions (e.g., Debian) set `PY_SSL_DEFAULT_CIPHERS=2` for Python 3.11+,
 # effectively re-enabling all these legacy ciphers.
 # So we can assume that re-enabling them is not a major security issue.
-if sys.version_info[1] >= 10:
+if sys.version_info >= (3, 10):
     def ssl_create_default_context():
         context = ssl.create_default_context()
-        if sys.version_info[1] >= 10:  # Python 3.10+ also disabled TLS 1.1, here we only care about cipher
+        if sys.version_info >= (3, 10):  # Python 3.10+ also disabled TLS 1.1, here we only care about cipher
             py39_ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
             # https://github.com/python/cpython/blob/50c21ad35372983680b44130be560d856c5f27ca/Modules/_ssl.c#L163
             py39_ctx.set_ciphers('DEFAULT:!aNULL:!eNULL:!MD5:!3DES:!DES:!RC4:!IDEA:!SEED:!aDSS:!SRP:!PSK')

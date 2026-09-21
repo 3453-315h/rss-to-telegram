@@ -352,6 +352,7 @@ async def migrate_to_new_url(feed: db.Feed, new_url: str) -> Union[bool, db.Feed
         tasks_migrate.append(env.loop.create_task(exist_sub.save()))
 
     await asyncio.gather(*tasks_migrate)
+    db.EffectiveTasks.delete(feed.id)
     await asyncio.gather(update_interval(new_url_feed), feed.delete())
     return new_url_feed
 

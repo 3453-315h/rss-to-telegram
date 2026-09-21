@@ -55,4 +55,7 @@ services:
       #- MULTIPROCESSING=1  # default: 0
       #- EXECUTOR_NICENESS_INCREMENT=5  # default: 2
       #- DEBUG=1  # debug logging, default: 0
+      #- YTDL_MAX_FILE_SIZE=2147483648  # default: 2147483648 (2 GB)
+      #- YTDL_CONCURRENCY=2  # default: 2
+      #- YTDL_COOKIES_PATH=/app/config/cookies.txt  # default: None
 # ↑------ Advanced settings ------↑ #

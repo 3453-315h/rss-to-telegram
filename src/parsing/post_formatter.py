@@ -158,16 +158,25 @@ class PostFormatter:
         :param display_media: -1=disable, 0=enable
         :return: (formatted post, need media, need linkpreview)
         """
-        assert send_mode in {FORCE_LINK, AUTO, FORCE_TELEGRAPH, FORCE_MESSAGE}
-        assert isinstance(length_limit, int) and length_limit >= 0
-        assert link_preview in {DISABLE, AUTO, FORCE_ENABLE}
-        assert display_author in {DISABLE, AUTO, FORCE_DISPLAY}
-        assert display_via in {NO_FEED_TITLE_BUT_LINK_AS_POST_TITLE, COMPLETELY_DISABLE, NO_FEED_TITLE_BUT_TEXT_LINK,
-                               NO_FEED_TITLE_BUT_BARE_LINK, FEED_TITLE_AND_LINK, FEED_TITLE_AND_LINK_AS_POST_TITLE}
-        assert display_title in {DISABLE, AUTO, FORCE_DISPLAY}
-        assert display_entry_tags in {DISABLE, FORCE_DISPLAY}
-        assert display_media in {DISABLE, AUTO, ONLY_MEDIA_NO_CONTENT}
-        assert style in {RSSTT, FLOWERSS}
+        if send_mode not in {FORCE_LINK, AUTO, FORCE_TELEGRAPH, FORCE_MESSAGE}:
+            raise ValueError(f"Invalid send_mode: {send_mode}")
+        if not (isinstance(length_limit, int) and length_limit >= 0):
+            raise ValueError(f"Invalid length_limit: {length_limit}")
+        if link_preview not in {DISABLE, AUTO, FORCE_ENABLE}:
+            raise ValueError(f"Invalid link_preview: {link_preview}")
+        if display_author not in {DISABLE, AUTO, FORCE_DISPLAY}:
+            raise ValueError(f"Invalid display_author: {display_author}")
+        if display_via not in {NO_FEED_TITLE_BUT_LINK_AS_POST_TITLE, COMPLETELY_DISABLE, NO_FEED_TITLE_BUT_TEXT_LINK,
+                               NO_FEED_TITLE_BUT_BARE_LINK, FEED_TITLE_AND_LINK, FEED_TITLE_AND_LINK_AS_POST_TITLE}:
+            raise ValueError(f"Invalid display_via: {display_via}")
+        if display_title not in {DISABLE, AUTO, FORCE_DISPLAY}:
+            raise ValueError(f"Invalid display_title: {display_title}")
+        if display_entry_tags not in {DISABLE, FORCE_DISPLAY}:
+            raise ValueError(f"Invalid display_entry_tags: {display_entry_tags}")
+        if display_media not in {DISABLE, AUTO, ONLY_MEDIA_NO_CONTENT}:
+            raise ValueError(f"Invalid display_media: {display_media}")
+        if style not in {RSSTT, FLOWERSS}:
+            raise ValueError(f"Invalid style: {style}")
 
         sub_title = (sub_title or self.feed_title)
         tags = tags or []

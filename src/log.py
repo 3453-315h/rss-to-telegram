@@ -21,6 +21,7 @@ import asyncio
 import logging
 import colorlog
 import os
+import sys
 import signal
 
 from . import env
@@ -58,12 +59,12 @@ async def exit_handler(prerequisite: Awaitable = None):
     except Exception as e:
         _logger.critical('Failed to gracefully exit:', exc_info=e)
     finally:
-        exit(1)
+        sys.exit(1)
 
 
 def shutdown(prerequisite: Awaitable = None):
     if not env.loop.is_running():
-        exit(1)
+        sys.exit(1)
     env.loop.call_later(20, lambda: os.kill(os.getpid(), signal.SIGKILL))  # double insurance
     asyncio.gather(env.loop.create_task(exit_handler(prerequisite)), return_exceptions=True)
 
@@ -94,7 +95,7 @@ class _APSCFilter(logging.Filter):
         self.watchdog = _Watchdog()
 
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.msg % record.args
+        msg = record.getMessage()
         if 'skipped: maximum number of running instances reached' in msg:
             self.count += 1
             if self.count != 0 and self.count % 5 == 0:
@@ -123,7 +124,7 @@ class _APSCFilter(logging.Filter):
 
 class _AiohttpAccessFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.msg % record.args
+        msg = record.getMessage()
         if record.levelno <= logging.INFO and 'Mozilla' not in msg:
             return False
         return True
@@ -131,7 +132,7 @@ class _AiohttpAccessFilter(logging.Filter):
 
 class _TelethonClientUpdatesFilter(logging.Filter):
     def filter(self, record: logging.LogRecord) -> bool:
-        msg = record.msg % record.args
+        msg = record.getMessage()
         if 'Fatal error' in msg:
             coro = env.bot.send_message(
                 env.ERROR_LOGGING_CHAT,

@@ -293,22 +293,29 @@ class Notifier:
                 if e.message == 'TOPIC_CLOSED':
                     return await self._on_blocked(user_id=user_id, err_msg=e.message)
         except Exception as e:
-            logger.error(f'Failed to send {post.link} (feed: {post.feed_link}, user: {sub.user_id}):', exc_info=e)
+            is_post_obj = not isinstance(post, str)
+            post_link = post.link if is_post_obj else getattr(getattr(sub, 'feed', None), 'link', 'N/A')
+            feed_link = post.feed_link if is_post_obj else getattr(getattr(sub, 'feed', None), 'link', 'N/A')
+            title = post.title if is_post_obj else 'Notification'
+            feed_title = post.feed_title if is_post_obj else getattr(getattr(sub, 'feed', None), 'title', 'N/A')
+            author = post.author if is_post_obj else None
+
+            logger.error(f'Failed to send {post_link} (feed: {feed_link}, user: {sub.user_id}):', exc_info=e)
             try:
                 error_message = Post(
-                    f'Something went wrong while sending this post (feed: {post.feed_link}, user: {sub.user_id}). '
+                    f'Something went wrong while sending this post (feed: {feed_link}, user: {sub.user_id}). '
                     'Please check:<br><br>' + format_exc().replace('\n', '<br>'),
-                    title=post.title,
-                    feed_title=post.feed_title,
-                    link=post.link,
-                    author=post.author,
-                    feed_link=post.feed_link,
+                    title=title,
+                    feed_title=feed_title,
+                    link=post_link,
+                    author=author,
+                    feed_link=feed_link,
                 )
                 await error_message.send_formatted_post(env.ERROR_LOGGING_CHAT, send_mode=2)
             except Exception as e:
                 logger.error(
-                    f'Failed to send sending error message for {post.link} '
-                    f'(feed: {post.feed_link}, user: {sub.user_id}):',
+                    f'Failed to send sending error message for {post_link} '
+                    f'(feed: {feed_link}, user: {sub.user_id}):',
                     exc_info=e,
                 )
                 await env.bot.send_message(

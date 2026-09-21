@@ -5,6 +5,7 @@
 ### 亮点
 
 - **支持 Python 3.13**: 正式支持 Python 3.13。官方 Docker 镜像现在也基于 Python 3.13。
+- **YouTube 视频下载管理员菜单 (`/ytdl`)**: 基于 `yt-dlp` 为 bot 管理员添加了交互式媒体下载菜单。管理员可发送 `/ytdl <url>` 或通过回复消息发送 `/ytdl`，选择下载最佳 MP4、720p MP4 或 MP3 音频。借助 Telethon 的原生 MTProto 协议支持，可直接上传最高 2.0 GB 的文件至 Telegram。
 
 ### 增强
 

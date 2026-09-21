@@ -53,3 +53,10 @@ class RetryInIpv4(ClientError):
         self.code = code
         self.reason = reason
         super().__init__(f'{code} {reason}' if code and reason else (code or reason or ''))
+
+
+class SSRFBlockedError(ClientError):
+    def __init__(self, host: str = None):
+        self.host = host
+        super().__init__(f'SSRF protection blocked request to private/restricted host: {host}')
+

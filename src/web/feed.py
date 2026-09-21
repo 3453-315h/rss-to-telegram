@@ -56,7 +56,11 @@ async def feed_get(url: str, timeout: Optional[float] = sentinel, web_semaphore:
         ret.web_response = resp
 
         # some rss feed implement http caching improperly :(
-        if resp.status == 200 and int(resp.headers.get('Content-Length', '1')) == 0:
+        try:
+            cl_int = int(resp.headers.get('Content-Length', '1'))
+        except (ValueError, TypeError):
+            cl_int = 1
+        if resp.status == 200 and cl_int == 0:
             ret.status = 304
             # ret.msg = f'"Content-Length" is 0'
             return ret

@@ -23,7 +23,6 @@ from telethon.tl import types, functions
 from telethon.errors.rpcbaseerrors import TimedOutError
 from telethon.errors.rpcerrorlist import SlowModeWaitError, FloodWaitError, ServerError
 from telethon.utils import get_message_id
-from collections import defaultdict
 
 from .. import log, env, locks
 from ..errors_collection import MediaSendFailErrors
@@ -33,8 +32,13 @@ from .splitter import html_to_telegram_split
 logger = log.getLogger('RSStT.message')
 
 
+class _UserSendingLockProxy(dict):
+    def __getitem__(self, key):
+        return locks.user_sending_lock(key)
+
+
 class MessageDispatcher:
-    user_sending_lock = defaultdict(asyncio.Lock)
+    user_sending_lock = _UserSendingLockProxy()
 
     def __init__(self,
                  user_id: int,
@@ -96,7 +100,7 @@ class MessageDispatcher:
             await self.generate_messages()
         sent_msgs: list[types.Message] = []
         try:
-            async with self.user_sending_lock[self.user_id]:
+            async with locks.user_sending_lock(self.user_id):
                 for message in self.messages:
                     msg = await message.send(reply_to=sent_msgs[-1] if sent_msgs else None)
                     if msg:

@@ -30,6 +30,7 @@ from aiohttp_socks import ProxyConnector
 from dns.asyncresolver import resolve
 from dns.exception import DNSException
 from urllib.parse import urlparse
+import socket
 from socket import AF_INET, AF_INET6
 from functools import partial
 from asyncstdlib.functools import lru_cache
@@ -37,8 +38,8 @@ from asyncstdlib.functools import lru_cache
 from .. import env, locks
 from ..compat import nullcontext, ssl_create_default_context, AiohttpUvloopTransportHotfix
 from ..aio_helper import run_async
-from ..errors_collection import RetryInIpv4
-from .utils import YummyCookieJar, WebResponse, proxy_filter, logger, sentinel
+from ..errors_collection import RetryInIpv4, SSRFBlockedError
+from .utils import YummyCookieJar, WebResponse, proxy_filter, is_private_ip, logger, sentinel
 
 # Reuse SSLContext as aiohttp does:
 # https://github.com/aio-libs/aiohttp/blob/f1e4213fb06634584f8d7a1eb90f5397736a18cc/aiohttp/connector.py#L959
@@ -138,6 +139,22 @@ async def request(
     )
 
 
+async def _check_ssrf(host: Optional[str]) -> None:
+    if not host or env.ALLOW_PRIVATE_NETWORKS:
+        return
+    if is_private_ip(host):
+        raise SSRFBlockedError(host)
+    try:
+        loop = asyncio.get_running_loop()
+        addr_info = await loop.getaddrinfo(host, None)
+        for family, _, _, _, sockaddr in addr_info:
+            ip_str = sockaddr[0]
+            if is_private_ip(ip_str):
+                raise SSRFBlockedError(f'{host} ({ip_str})')
+    except (socket.gaierror, OSError, asyncio.TimeoutError):
+        pass
+
+
 async def _request(
         method: str,
         url: str,
@@ -153,6 +170,7 @@ async def _request(
         timeout = env.HTTP_TIMEOUT
 
     host = urlparse(url).hostname
+    await _check_ssrf(host)
     semaphore_to_use = locks.hostname_semaphore(host, parse=False) if semaphore in (None, True) \
         else (semaphore or nullcontext())
 

@@ -55,7 +55,6 @@ plt.rcParams['axes.unicode_minus'] = False
 filterwarnings('error', 'constrained_layout not applied', UserWarning)
 filterwarnings('ignore', "coroutine 'convert_table_to_png' was never awaited", RuntimeWarning)
 
-fig, ax = plt.subplots(figsize=(8, 8))
 
 
 def _convert_table_to_png(table_html: str) -> Optional[bytes]:
@@ -116,6 +115,7 @@ def _convert_table_to_png(table_html: str) -> Optional[bytes]:
 
         auto_set_column_width_flag = True
         for _ in range(2):
+            fig, ax = plt.subplots(figsize=(8, 8))
             try:
                 # draw table
                 table = ax.table(cellText=cell_texts,
@@ -153,7 +153,7 @@ def _convert_table_to_png(table_html: str) -> Optional[bytes]:
             finally:
                 # noinspection PyBroadException
                 try:
-                    plt.cla()
+                    plt.close(fig)
                 except Exception:
                     pass
             # crop

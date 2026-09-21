@@ -36,13 +36,32 @@ from ..i18n import i18n
 logger = log.getLogger('RSStT.web')
 PRIVATE_NETWORKS: Final = tuple(ip_network(ip_block) for ip_block in
                                 ('127.0.0.0/8', '::1/128',
-                                 # loopback is not a private network, list in here for convenience
+                                 '0.0.0.0/8',
                                  '169.254.0.0/16', 'fe80::/10',  # link-local address
                                  '10.0.0.0/8',  # class A private network
                                  '172.16.0.0/12',  # class B private networks
                                  '192.168.0.0/16',  # class C private networks
+                                 '100.64.0.0/10',  # carrier-grade NAT
                                  'fc00::/7',  # ULA
                                  ))
+
+
+def is_private_ip(hostname_or_ip: Optional[str]) -> bool:
+    """
+    Check if a hostname or IP address resolves to a private, loopback, or cloud-metadata network.
+    """
+    if not hostname_or_ip:
+        return False
+    lower_host = hostname_or_ip.lower().strip('[]')
+    if lower_host in ('localhost', 'localhost.localdomain'):
+        return True
+    try:
+        ip = ip_address(lower_host)
+        return any(ip in net for net in PRIVATE_NETWORKS)
+    except ValueError:
+        return False
+
+
 sentinel = object()
 
 
@@ -282,12 +301,8 @@ def proxy_filter(url: str, parse: bool = True) -> bool:
         return True
 
     hostname = urlparse(url).hostname if parse else url
-    if env.PROXY_BYPASS_PRIVATE:
-        with suppress(ValueError):  # if not an IP, continue
-            ip_a = ip_address(hostname)
-            is_private = any(ip_a in network for network in PRIVATE_NETWORKS)
-            if is_private:
-                return False
+    if env.PROXY_BYPASS_PRIVATE and is_private_ip(hostname):
+        return False
     if env.PROXY_BYPASS_DOMAINS:
         is_bypassed = any(hostname.endswith(domain) and (hostname == domain or hostname[-len(domain) - 1] == '.')
                           for domain in env.PROXY_BYPASS_DOMAINS)

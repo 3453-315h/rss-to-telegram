@@ -1,0 +1,65 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+    branches-ignore:
+      - dependabot/**
+  pull_request:
+    branches:
+      - master
+      - dev
+  workflow_dispatch:
+
+jobs:
+  unit-tests:
+    name: Python ${{ matrix.python-version }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13']
+        os: [ubuntu-latest]
+        include:
+          - os: macos-latest
+            python-version: '3.12'
+          - os: windows-latest
+            python-version: '3.12'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          pip install -r requirements.txt
+
+      - name: Verify compilation (bytecode)
+        shell: bash
+        run: |
+          python -m compileall src
+
+      - name: Run unit test suite
+        shell: bash
+        env:
+          TOKEN: test
+          MANAGER: "123456"
+          DATABASE_URL: sqlite://test.db
+        run: |
+          python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Clean up temporary test database
+        if: always()
+        shell: bash
+        run: |
+          rm -f test.db

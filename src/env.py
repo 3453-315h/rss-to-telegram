@@ -130,7 +130,7 @@ __arg_parser.add_argument('-c', '--config', metavar='/path/to/config/folder', ty
 __arg_parser.add_argument('--dummy', type=str, action='append', nargs=1,
                           help='dummy argument, can be repeated for multiple times. '
                                'Useful to distinguish multiple bot instances on the same host with command line')
-cli_args = __arg_parser.parse_args()
+cli_args, _ = __arg_parser.parse_known_args()
 custom_config_path = cli_args.config[0] if cli_args.config else None
 
 if custom_config_path:
@@ -238,10 +238,10 @@ try:
 
     if not all((TOKEN, MANAGER)):
         logger.critical('"TOKEN" OR "MANAGER" NOT SET! PLEASE CHECK YOUR SETTINGS!')
-        exit(1)
+        sys.exit(1)
 except Exception as e:
     logger.critical('INVALID "MANAGER"! PLEASE CHECK YOUR SETTINGS!', exc_info=e)
-    exit(1)
+    sys.exit(1)
 
 _error_logging_chat = os.environ.get('ERROR_LOGGING_CHAT')
 ERROR_LOGGING_CHAT: Final = int(_error_logging_chat) if _error_logging_chat else _manager[0]
@@ -291,6 +291,7 @@ REQUESTS_PROXIES: Final = {'all': R_PROXY} if R_PROXY else {}
 
 PROXY_BYPASS_PRIVATE: Final = __bool_parser(os.environ.get('PROXY_BYPASS_PRIVATE'))
 PROXY_BYPASS_DOMAINS: Final = __list_parser(os.environ.get('PROXY_BYPASS_DOMAINS'))
+ALLOW_PRIVATE_NETWORKS: Final = __bool_parser(os.environ.get('ALLOW_PRIVATE_NETWORKS'), default_value=False)
 USER_AGENT: Final = os.environ.get('USER_AGENT') or f'RSStT/{__version__} RSS Reader (+https://git.io/RSStT)'
 IPV6_PRIOR: Final = __bool_parser(os.environ.get('IPV6_PRIOR'))
 VERIFY_TLS: Final = __bool_parser(os.environ.get('VERIFY_TLS'), default_value=True)
@@ -300,6 +301,12 @@ HTTP_CONCURRENCY: Final = int(os.environ.get('HTTP_CONCURRENCY') or 1024)
 HTTP_CONCURRENCY_PER_HOST: Final = int(os.environ.get('HTTP_CONCURRENCY_PER_HOST') or 16)
 HTTP_MAX_LINE_SIZE: Final = int(os.environ.get('HTTP_MAX_LINE_SIZE') or 16384)
 HTTP_MAX_FIELD_SIZE: Final = int(os.environ.get('HTTP_MAX_FIELD_SIZE') or 16384)
+
+# ----- ytdl media downloader config -----
+YTDL_MAX_FILE_SIZE: Final = int(os.environ.get('YTDL_MAX_FILE_SIZE') or (2 * 1024 * 1024 * 1024))  # 2 GB
+YTDL_CONCURRENCY: Final = int(os.environ.get('YTDL_CONCURRENCY') or 2)
+YTDL_COOKIES_PATH: Final = os.environ.get('YTDL_COOKIES_PATH') or None
+
 
 # ----- img relay server config -----
 _img_relay_server = os.environ.get('IMG_RELAY_SERVER') or 'https://rsstt-img-relay.rongrong.workers.dev/'
@@ -351,6 +358,7 @@ def __get_database_url() -> str:
             )
     else:
         logger.critical('INVALID DATABASE URL!', exc_info=err)
+        sys.exit(1)
 
 
 DATABASE_URL: Final = __get_database_url()

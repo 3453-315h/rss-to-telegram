@@ -20,7 +20,9 @@ from typing_extensions import Final
 from collections.abc import Callable
 
 import asyncio
+import time
 import re
+from collections import deque, defaultdict
 from contextlib import suppress
 from functools import partial, wraps
 from cachetools import TTLCache
@@ -249,6 +251,42 @@ async def deactivate_all_and_leave_chat(user_id: hints.EntityLike):
 default_leave_chat_helper: Final = deactivate_all_and_leave_chat
 
 
+class CommandRateLimiter:
+    """
+    Sliding-window rate limiter per (chat_id, user_id).
+    Protects bot from rapid command flooding and DoS.
+    """
+    def __init__(self, limit: int = 5, window_seconds: float = 10.0):
+        self.limit = limit
+        self.window_seconds = window_seconds
+        self._records: dict[tuple[int, int], deque[float]] = defaultdict(deque)
+
+    def is_allowed(self, chat_id: int, user_id: int) -> bool:
+        now = time.monotonic()
+        key = (chat_id, user_id)
+        timestamps = self._records[key]
+
+        cutoff = now - self.window_seconds
+        while timestamps and timestamps[0] < cutoff:
+            timestamps.popleft()
+
+        if len(timestamps) < self.limit:
+            timestamps.append(now)
+            return True
+        return False
+
+    def cleanup_idle(self) -> None:
+        """Evict stale keys whose timestamps have completely expired."""
+        now = time.monotonic()
+        cutoff = now - self.window_seconds
+        stale_keys = [k for k, q in self._records.items() if not q or q[-1] < cutoff]
+        for k in stale_keys:
+            del self._records[k]
+
+
+command_rate_limiter = CommandRateLimiter(limit=5, window_seconds=10.0)
+
+
 def command_gatekeeper(
         func: Optional[Callable] = None,
         *,
@@ -419,7 +457,7 @@ def command_gatekeeper(
             if isinstance(sender, types.Channel):
                 sender_fullname = sender.title
             elif sender is not None:
-                sender_fullname = sender.first_name + (
+                sender_fullname = (sender.first_name or '') + (
                     f' {sender.last_name}'
                     if sender.last_name
                     else ''
@@ -435,7 +473,7 @@ def command_gatekeeper(
             if not lang and not ignore_tg_lang:
                 lang = sender.lang_code if hasattr(sender, 'lang_code') else None
                 if not lang and sender_id != chat_id:
-                    lang = db.User.get_or_none(id=sender_id).values_list('lang', flat=True)
+                    lang = await db.User.get_or_none(id=sender_id).values_list('lang', flat=True)
 
             # inline refusing check
             if is_inline:
@@ -468,6 +506,19 @@ def command_gatekeeper(
                     raise events.StopPropagation
 
             await user_and_chat_permission_check()
+
+            # Rate limit non-manager users to prevent abuse and command flooding
+            if sender_id and sender_id not in env.MANAGER and not is_callback and not is_chat_action:
+                if not command_rate_limiter.is_allowed(chat_id or 0, sender_id):
+                    logger.warning(f'Throttled {describe_user()} executing {command}: rate limit exceeded')
+                    if not is_inline:
+                        throttle_msg = (
+                            i18n[lang]['flood_wait_prompt']
+                            if lang and lang in i18n and 'flood_wait_prompt' in i18n[lang]
+                            else 'Too many requests. Please wait a few seconds before trying again.'
+                        )
+                        await respond_or_answer(event, throttle_msg)
+                    raise events.StopPropagation
 
             # operating channel/group in private chat ("remote" command), firstly get base info
             pattern_match: re.Match = event.pattern_match if not is_chat_action else None
@@ -572,7 +623,7 @@ def command_gatekeeper(
                     chat: Optional[Union[types.Chat, types.Channel]] = await event.get_chat()
 
                 chat_title = chat and (
-                    chat.first_name + (
+                    (chat.first_name or '') + (
                         f' {chat.last_name}'
                         if chat.last_name
                         else ''

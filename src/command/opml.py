@@ -103,6 +103,11 @@ async def opml_import(
 
     await check_sub_limit(event, user_id=chat_id, lang=lang)
 
+    file_size = getattr(getattr(event, 'file', None), 'size', None)
+    if file_size and file_size > 20 * 1024 * 1024:
+        await event.reply('ERROR: ' + i18n[lang]['fetch_file_failed'] + ' (File exceeds 20MB limit)')
+        return
+
     try:
         opml_file: bytes = await event.download_media(file=bytes)
     except Exception as e:
@@ -163,7 +168,7 @@ async def opml_import(
                      if sub.id in range(curr_start, curr_id + 1)):  # if any sub has custom title
                 subs_between_w_title_count = await db.Sub.filter(
                     user_id=chat_id,
-                    id__in=(curr_id + 1, next_id - 1),
+                    id__range=(curr_id + 1, next_id - 1),
                     title__not_isnull=True,
                 ).count()
                 if not subs_between_w_title_count:

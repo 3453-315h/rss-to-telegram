@@ -298,6 +298,8 @@ class Parser:
             if not src:
                 return None
             src = resolve_relative_link(self.feed_link, src)
+            if not isAbsoluteHttpLink(src):
+                return None
             title = urlparse(src).hostname if env.TRAFFIC_SAVING else await web.get_page_title(src)
             return Text([Br(2), effective_link(f'iframe ({title})', src), Br(2)])
 

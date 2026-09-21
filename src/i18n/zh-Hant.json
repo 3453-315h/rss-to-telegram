@@ -234,6 +234,7 @@
         "cmd_description_test": "測試 (僅限機器人管理員)",
         "cmd_description_set_option": "設定機器人選項 (僅限機器人管理員)",
         "cmd_description_user_info": "查看/更改使用者資訊 (僅限機器人管理員)",
+        "cmd_description_ytdl": "下載 YouTube 影片/音訊 (僅限機器人管理員)",
         "usage_in_channel_or_group_prompt_html": "<b>在頻道/群組中的用法:</b>\n1. 將機器人新增至頻道/群組中。\n2a. 直接<b>在頻道/群組中</b>傳送指令。\n2b. 或者，您可以<b>在和機器人的私人聊天中</b>像這樣傳送指令: <code>/sub @username https://example.com</code> 或者 <code>/sub -10010000000000 https://example.com</code>。\n(<code>@username</code> 是頻道/群組的使用者名稱，<code>@</code> 是不可或缺的; <code>-10010000000000</code> 是頻道/群組的 ID，且必須以 <code>-100</code> 為開頭)"
     }
 }

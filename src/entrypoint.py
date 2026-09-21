@@ -29,6 +29,7 @@ aio_helper.init()
 log.init()
 
 import os
+import sys
 import signal
 import asyncio
 from functools import partial
@@ -87,7 +88,7 @@ def init():
         # no login, just for test
         logger.info('Test mode, no login.')
         loop.run_until_complete(asyncio.gather(*pre_tasks))
-        exit(0)
+        sys.exit(0)
 
     sleep_for = 0
     while api_keys:
@@ -110,7 +111,7 @@ def init():
 
     if bot is None:
         logger.critical('LOGIN FAILED!')
-        exit(1)
+        sys.exit(1)
 
     env.bot = bot
     env.bot_peer = loop.run_until_complete(bot.get_me(input_peer=False))
@@ -170,6 +171,8 @@ async def pre():
                           events.NewMessage(pattern=construct_command_matcher('/user_info')))
     bot.add_event_handler(command.administration.cmd_set_option,
                           events.NewMessage(pattern=construct_command_matcher('/set_option')))
+    bot.add_event_handler(command.ytdl.cmd_ytdl,
+                          events.NewMessage(pattern=construct_command_matcher('/ytdl') + urls_matcher))
 
     # trigger bt inline query
     inline_query_matcher = rf'(@{env.bot_peer.username}\s+)?'
@@ -194,6 +197,8 @@ async def pre():
                           events.CallbackQuery(pattern='^null$'))
     bot.add_event_handler(command.misc.callback_cancel,
                           events.CallbackQuery(pattern='^cancel$'))
+    bot.add_event_handler(command.ytdl.callback_ytdl,
+                          events.CallbackQuery(pattern=r'^ytdl:.*$'))
     bot.add_event_handler(command.misc.callback_get_group_migration_help,
                           events.CallbackQuery(pattern=r'^get_group_migration_help=[\w_\-]+$'))
     bot.add_event_handler(command.sub.cmd_list_or_callback_get_list_page,
@@ -287,6 +292,9 @@ async def post():
     ]
     if scheduler.running:
         scheduler.shutdown(wait=False)
+    if env.PORT:
+        from . import redirect_server
+        tasks.append(loop.create_task(redirect_server.cleanup()))
     if bot and bot.is_connected():
         tasks.append(bot.disconnect())
     res = await asyncio.gather(*tasks, return_exceptions=True)
@@ -305,7 +313,7 @@ def sig_handler(signum, *_, **__):
         logger.warning(f'Received signal {signal.Signals(signum).name}')
     except ValueError:
         logger.warning(f'Received signal {signum}')
-    exit(128 + signum)
+    sys.exit(128 + signum)
 
 
 def main():
@@ -377,7 +385,7 @@ def main():
         else:
             force_quit()
         logger.log(log.INFO if exit_code == 0 else log.ERROR, f'Exited with code {exit_code}')
-        exit(exit_code)
+        sys.exit(exit_code)
 
 
 if __name__ == '__main__':

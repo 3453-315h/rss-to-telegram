@@ -19,7 +19,7 @@ Shared locks.
 
 from __future__ import annotations
 from typing import Union
-from contextlib import AbstractAsyncContextManager
+from contextlib import AbstractAsyncContextManager, suppress
 
 import asyncio
 from time import time
@@ -75,6 +75,7 @@ class ContextTimeoutManager:
 class _UserLockBucket:
     def __init__(self):
         self.msg_lock = asyncio.Lock()
+        self.sending_lock = asyncio.Lock()
         self.flood_lock = asyncio.Lock()
         self.media_upload_semaphore = asyncio.BoundedSemaphore(3)
         self.pending_callbacks = set()
@@ -85,6 +86,10 @@ _user_bucket: defaultdict[_USER_LIKE, _UserLockBucket] = defaultdict(_UserLockBu
 
 def user_msg_lock(user: _USER_LIKE) -> asyncio.Lock:
     return _user_bucket[user].msg_lock
+
+
+def user_sending_lock(user: _USER_LIKE) -> asyncio.Lock:
+    return _user_bucket[user].sending_lock
 
 
 def user_flood_lock(user: _USER_LIKE) -> asyncio.Lock:
@@ -152,3 +157,37 @@ else:
 
     def hostname_semaphore(*_, **__) -> nullcontext:
         return _null_semaphore
+
+
+def cleanup_idle_locks() -> tuple[int, int]:
+    """
+    Evict idle user lock buckets and idle hostname semaphores to prevent unbounded memory growth.
+    :return: (evicted_users_count, evicted_hosts_count)
+    """
+    to_remove_users = [
+        user for user, bucket in _user_bucket.items()
+        if not bucket.msg_lock.locked()
+        and not bucket.sending_lock.locked()
+        and not bucket.flood_lock.locked()
+        and getattr(bucket.media_upload_semaphore, '_value', 3) == 3
+        and not bucket.pending_callbacks
+    ]
+    for user in to_remove_users:
+        del _user_bucket[user]
+
+    evicted_hosts = 0
+    if env.HTTP_CONCURRENCY_PER_HOST > 0:
+        to_remove_hosts = [
+            host for host, sem in _hostname_semaphore_bucket.items()
+            if getattr(sem, '_value', env.HTTP_CONCURRENCY_PER_HOST) == env.HTTP_CONCURRENCY_PER_HOST
+        ]
+        for host in to_remove_hosts:
+            del _hostname_semaphore_bucket[host]
+        evicted_hosts = len(to_remove_hosts)
+
+    with suppress(Exception):
+        from .command.utils import command_rate_limiter
+        command_rate_limiter.cleanup_idle()
+
+    return len(to_remove_users), evicted_hosts
+

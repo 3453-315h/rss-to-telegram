@@ -126,7 +126,7 @@ RUN \
     set -ex && \
     apt-get update && \
     apt-get install -yq --no-install-recommends \
-        fonts-wqy-microhei libjemalloc2 \
+        fonts-wqy-microhei libjemalloc2 ffmpeg \
     && \
     rm -rf /var/lib/apt/lists/*
 
